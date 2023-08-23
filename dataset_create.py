@@ -10,23 +10,49 @@ def generate_data(n):
     heights = np.random.uniform(150, 190, n)
     weights = np.random.uniform(45, 90, n)
     times = [sample_date + timedelta(hours=np.random.uniform(0, 24), minutes=np.random.uniform(0, 60)) for _ in range(n)]
-    remaining_hours_before_eating = np.random.uniform(1, 20, n)
     
+    # Initialize remaining_hours_before_eating based on the time of the day
+    remaining_hours_before_eating = np.random.uniform(1, 20, n)
+    for i in range(n):
+        hour = times[i].hour
+        if 7 <= hour < 11:  # Morning
+            remaining_hours_before_eating[i] = np.random.uniform(7, 12)
+        elif 11 <= hour < 14:  # Noon
+            remaining_hours_before_eating[i] = np.random.uniform(2, 3) if np.random.rand() > 0.5 else np.random.uniform(5, 6)
+        elif 14 <= hour < 18:  # Afternoon
+            remaining_hours_before_eating[i] = np.random.uniform(3, 5)
+        elif 18 <= hour < 24:  # Evening
+            remaining_hours_before_eating[i] = np.random.uniform(2, 4)
+    
+    # Calculate daily caloric needs
     daily_needs = np.array([compute_bmr(ages[i], genders[i], heights[i], weights[i]) for i in range(n)]) * 1.2
     calories_eaten = np.random.uniform(0, daily_needs)
-    next_meal_calories = np.array([adjust_for_remaining_time_before_eating(remaining_hours_before_eating[i], daily_needs[i], calories_eaten[i]) for i in range(n)])
-    can_eat = (calories_eaten + next_meal_calories <= daily_needs).astype(int)
+    next_meal_calories = np.random.uniform(300, 800, n)
+    
+    can_eat = []
+    for i in range(n):
+        hour = times[i].hour
+        if 7 <= hour < 11:  # Morning
+            can_eat.append(int((calories_eaten[i] + next_meal_calories[i]) <= daily_needs[i] * 0.2))
+        elif 11 <= hour < 14:  # Noon
+            can_eat.append(int((calories_eaten[i] + next_meal_calories[i]) <= daily_needs[i] * 0.5))
+        elif 14 <= hour < 18:  # Afternoon
+            can_eat.append(int((calories_eaten[i] + next_meal_calories[i]) <= daily_needs[i] * 0.7))
+        elif 18 <= hour < 24:  # Evening
+            can_eat.append(int((calories_eaten[i] + next_meal_calories[i]) <= daily_needs[i] * 0.8))
+        else:  # Other times
+            can_eat.append(int((calories_eaten[i] + next_meal_calories[i]) <= daily_needs[i]))
     
     for i in range(n):
         data.append({
-            '年齢': ages[i], 
-            '性別': genders[i], 
-            '身長': heights[i], 
-            '体重': weights[i], 
-            '今の時間帯': times[i].strftime('%Y-%m-%d %H:%M:%S'), 
-            '空いた時間': remaining_hours_before_eating[i], 
-            '食べたカロリー': calories_eaten[i], 
-            'これから食べるカロリー': next_meal_calories[i], 
+            '年齢': ages[i],
+            '性別': genders[i],
+            '身長': heights[i],
+            '体重': weights[i],
+            '今の時間帯': times[i].strftime('%Y-%m-%d %H:%M:%S'),
+            '空いた時間': remaining_hours_before_eating[i],
+            '食べたカロリー': calories_eaten[i],
+            'これから食べるカロリー': next_meal_calories[i],
             '食べれたか': can_eat[i]
         })
     return data
@@ -45,21 +71,7 @@ def compute_bmr(age, gender, height, weight):
     else:
         return (10 * weight) + (6.25 * height) - (5 * age) - 161
 
-def adjust_for_remaining_time_before_eating(hours, daily_needs, current_calories):
-    if hours < 2:
-        intake = daily_needs * np.random.uniform(0.25, 0.5) - current_calories
-    elif 2 <= hours < 5:
-        intake = (daily_needs - current_calories) * np.random.uniform(0.5, 0.75)
-    else:
-        intake = (daily_needs - current_calories) * np.random.uniform(0.75, 1.5)  
-
-    if np.random.rand() < 0.5:
-        intake *= np.random.uniform(1.1, 1.5)
-    return intake
-
-
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     data = generate_data(10000)
     write_to_csv(data, 'dataset.csv')
     
